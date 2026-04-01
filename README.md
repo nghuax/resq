@@ -1,6 +1,6 @@
 # ResQ MVP
 
-Vietnam-first roadside assistance and mobile repair MVP built with Next.js App Router, TypeScript, Tailwind CSS, Prisma, PostgreSQL, React Hook Form, Zod, and Leaflet.
+Vietnam-first roadside assistance and mobile repair MVP built with Next.js App Router, TypeScript, Tailwind CSS, React Hook Form, Zod, Leaflet, and a Convex-backed runtime data layer.
 
 ## What’s included
 
@@ -13,7 +13,8 @@ Vietnam-first roadside assistance and mobile repair MVP built with Next.js App R
 - Request tracking, history, invoice, payment, and review flows
 - Admin request management and fixer assignment
 - Fixer job dashboard and status updates
-- Prisma schema, migration SQL, and seed data
+- Convex schema, seed data, and cloud-connected queries/mutations
+- Prisma schema, migration SQL, and seed data retained as project deliverables and reference models
 
 ## Stack
 
@@ -22,10 +23,10 @@ Vietnam-first roadside assistance and mobile repair MVP built with Next.js App R
 - Tailwind CSS v4
 - React Hook Form
 - Zod
-- Prisma ORM
-- PostgreSQL
+- Convex
 - Custom JWT auth with OTP scaffold
 - Leaflet + React Leaflet
+- Prisma schema + migration artifacts retained in-repo
 
 ## Local setup
 
@@ -41,21 +42,27 @@ npm install
 cp .env.example .env
 ```
 
-3. Start a local PostgreSQL dev server with Prisma Dev, or point `DATABASE_URL` at your own PostgreSQL instance:
+3. Link the app to the existing Convex project:
 
 ```bash
-npm run db:dev
+npm run convex:once
 ```
 
-This prints a Postgres URL. Paste that value into `DATABASE_URL` inside `.env` if you are using Prisma Dev on your machine.
-
-The project now also includes Convex URLs in `.env.example` for future client or HTTP action integrations. They do not replace PostgreSQL for the current MVP data model.
-
-4. Push the schema and seed the database:
+If you need to configure the project on a fresh machine, use:
 
 ```bash
-npm run db:push
-npm run db:seed
+npx convex dev --once --configure existing
+```
+
+This writes `.env.local` with the active deployment values. The current project is linked to:
+
+- `https://bright-bear-144.convex.cloud`
+- `https://bright-bear-144.convex.site`
+
+4. Seed the Convex deployment:
+
+```bash
+npm run convex:seed
 ```
 
 5. Start the app:
@@ -65,6 +72,17 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+6. Optional Prisma reference tooling:
+
+```bash
+npm run db:generate
+npm run db:dev
+npm run db:push
+npm run db:seed
+```
+
+These commands are kept for the Prisma deliverables and local reference database, but the running MVP now reads and writes through Convex.
 
 ## Demo login
 
@@ -90,6 +108,9 @@ npm run start
 npm run lint
 npm run typecheck
 npm run check
+npm run convex:dev
+npm run convex:once
+npm run convex:seed
 npm run db:dev
 npm run db:dev:ls
 npm run db:dev:stop
@@ -101,11 +122,13 @@ npm run db:seed
 
 Example values are in [`./.env.example`](./.env.example).
 
-- `DATABASE_URL`: PostgreSQL connection string
+- `DATABASE_URL`: optional Prisma reference database URL used for Prisma tooling and generated types
 - `JWT_SECRET`: secret used to sign session JWTs
 - `NEXT_PUBLIC_APP_URL`: local app URL
+- `CONVEX_DEPLOYMENT`: deployment selected by the Convex CLI
 - `NEXT_PUBLIC_CONVEX_URL`: Convex cloud URL for client-side usage
-- `CONVEX_HTTP_ACTIONS_URL`: Convex HTTP actions base URL
+- `CONVEX_HTTP_ACTIONS_URL`: Convex site / HTTP actions base URL
+- `NEXT_PUBLIC_CONVEX_SITE_URL`: Convex CLI-generated site URL fallback
 - `OTP_DEV_FALLBACK_CODE`: dev OTP code shown in local mode
 - `NEXT_PUBLIC_DEFAULT_LAT`: default map latitude
 - `NEXT_PUBLIC_DEFAULT_LNG`: default map longitude
@@ -164,6 +187,13 @@ prisma/
   migrations/
   schema.prisma
   seed.ts
+convex/
+  schema.ts
+  seed.ts
+  auth.ts
+  customer.ts
+  admin.ts
+  fixer.ts
 src/
   app/
     api/
@@ -198,7 +228,9 @@ src/
 ## Notes
 
 - The login flow is scaffolded for OTP and uses a dev fallback code locally instead of an SMS provider.
-- PostgreSQL via Prisma remains the primary persistence layer for this MVP. Convex URLs are wired in as optional integration config, not as a replacement datastore.
+- Runtime persistence for the MVP now goes through Convex.
+- Prisma schema, migration SQL, and seed files are still included because they were part of the original deliverables and remain useful as typed reference models.
 - Payment processing is mocked for the MVP, but invoice and payment records are stored.
 - Request photo upload currently stores selected file names only. This keeps the MVP flow testable without wiring object storage yet.
 - The migration SQL lives at [`./prisma/migrations/0001_init/migration.sql`](./prisma/migrations/0001_init/migration.sql).
+- For a real live frontend deploy, add the Convex and JWT env vars to your hosting provider and connect the GitHub repo to Vercel or another Next.js host.

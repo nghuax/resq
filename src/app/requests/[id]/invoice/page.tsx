@@ -14,14 +14,7 @@ export default async function InvoicePage({
 }) {
   const user = await requirePageRole(["customer"]);
   const { id } = await params;
-
-  let request;
-
-  try {
-    request = await getInvoiceForUser(user.id, id);
-  } catch {
-    notFound();
-  }
+  const request = await getInvoiceForUser(user.id, id).catch(() => notFound());
 
   return (
     <div className="container-shell space-y-8 py-10 md:py-14">

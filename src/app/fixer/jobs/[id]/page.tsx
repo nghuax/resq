@@ -15,14 +15,7 @@ export default async function FixerJobDetailPage({
 }) {
   const user = await requirePageRole(["fixer"]);
   const { id } = await params;
-
-  let job;
-
-  try {
-    job = await getFixerJobDetail(user.id, id);
-  } catch {
-    notFound();
-  }
+  const job = await getFixerJobDetail(user.id, id).catch(() => notFound());
 
   return (
     <div className="container-shell space-y-8 py-10 md:py-14">

@@ -19,6 +19,7 @@ export const env = {
     "https://bright-bear-144.convex.cloud",
   CONVEX_HTTP_ACTIONS_URL:
     process.env.CONVEX_HTTP_ACTIONS_URL ??
+    process.env.NEXT_PUBLIC_CONVEX_SITE_URL ??
     "https://bright-bear-144.convex.site",
   OTP_DEV_FALLBACK_CODE: process.env.OTP_DEV_FALLBACK_CODE ?? "123456",
   NEXT_PUBLIC_DEFAULT_LAT: readNumber(

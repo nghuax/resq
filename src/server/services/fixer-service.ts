@@ -1,31 +1,22 @@
 import { ApiError } from "@/lib/api-response";
 import { updateFixerJobStatusSchema } from "@/schemas/fixer";
-import { getDb } from "@/server/db/prisma";
-import {
-  appendStatusLog,
-  ensureFixerOwnsRequest,
-  findRequestById,
-  requestDetailsInclude,
-} from "@/server/services/request-shared";
+import { api, asConvexId, convexMutation, convexQuery } from "@/server/db/convex";
+import type { FixerProfileView, RequestView } from "@/server/services/view-models";
 
-export async function listFixerJobs(userId: string) {
-  const db = await getDb();
-
-  return db.request.findMany({
-    where: {
-      assignedFixerId: userId,
-    },
-    include: requestDetailsInclude,
-    orderBy: {
-      createdAt: "desc",
-    },
+export async function listFixerJobs(userId: string): Promise<RequestView[]> {
+  return convexQuery<RequestView[]>(api.fixer.listFixerJobs, {
+    userId: asConvexId<"users">(userId),
   });
 }
 
-export async function getFixerJobDetail(userId: string, requestId: string) {
-  const request = await findRequestById(requestId);
-  ensureFixerOwnsRequest(request, userId);
-  return request;
+export async function getFixerJobDetail(
+  userId: string,
+  requestId: string,
+): Promise<RequestView> {
+  return convexQuery<RequestView>(api.fixer.getFixerJobDetail, {
+    userId: asConvexId<"users">(userId),
+    requestId: asConvexId<"requests">(requestId),
+  });
 }
 
 export async function updateFixerJobStatus(
@@ -34,56 +25,29 @@ export async function updateFixerJobStatus(
   rawInput: unknown,
 ) {
   const input = updateFixerJobStatusSchema.parse(rawInput);
-  const db = await getDb();
-  const request = await findRequestById(requestId);
 
-  ensureFixerOwnsRequest(request, userId);
-
-  if (request.status === "cancelled") {
-    throw new ApiError("Không thể cập nhật yêu cầu đã hủy.", 400);
-  }
-
-  return db.$transaction(async (tx) => {
-    await tx.request.update({
-      where: {
-        id: requestId,
-      },
-      data: {
-        status: input.status,
-        completedAt: input.status === "completed" ? new Date() : undefined,
-        finalPriceVnd:
-          input.status === "completed"
-            ? request.finalPriceVnd ?? request.invoice?.totalVnd ?? request.priceEstimateVnd
-            : request.finalPriceVnd,
-      },
-    });
-
-    await appendStatusLog(tx, {
-      requestId,
+  try {
+    return await convexMutation(api.fixer.updateFixerJobStatus, {
+      userId: asConvexId<"users">(userId),
+      requestId: asConvexId<"requests">(requestId),
       status: input.status,
-      actorUserId: userId,
-      descriptionVi: input.note,
-      etaMinutes: input.etaMinutes,
+      note: input.note || undefined,
+      etaMinutes: input.etaMinutes ?? undefined,
     });
+  } catch (error) {
+    throw error instanceof ApiError
+      ? error
+      : new ApiError(
+          error instanceof Error ? error.message : "Không thể cập nhật công việc.",
+          400,
+        );
+  }
+}
 
-    if (input.status === "completed") {
-      await tx.fixerProfile.updateMany({
-        where: {
-          userId,
-        },
-        data: {
-          totalJobs: {
-            increment: 1,
-          },
-        },
-      });
-    }
-
-    return tx.request.findUnique({
-      where: {
-        id: requestId,
-      },
-      include: requestDetailsInclude,
-    });
+export async function getFixerProfileForUser(
+  userId: string,
+): Promise<FixerProfileView | null> {
+  return convexQuery<FixerProfileView | null>(api.fixer.getFixerProfileForUser, {
+    userId: asConvexId<"users">(userId),
   });
 }

@@ -22,20 +22,21 @@ export default async function TrackingPage({
 }) {
   const user = await requirePageUser();
   const { id } = await params;
+  const request = await (async () => {
+    try {
+      if (user.role === "customer") {
+        return await getRequestForUser(user.id, id);
+      }
 
-  let request;
+      if (user.role === "fixer") {
+        return await getFixerJobDetail(user.id, id);
+      }
 
-  try {
-    if (user.role === "customer") {
-      request = await getRequestForUser(user.id, id);
-    } else if (user.role === "fixer") {
-      request = await getFixerJobDetail(user.id, id);
-    } else {
-      request = await findRequestById(id);
+      return await findRequestById(id);
+    } catch {
+      return notFound();
     }
-  } catch {
-    notFound();
-  }
+  })();
 
   const etaMinutes = getLatestEtaMinutes(request);
 

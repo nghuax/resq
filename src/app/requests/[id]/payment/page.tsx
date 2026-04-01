@@ -14,14 +14,7 @@ export default async function PaymentPage({
 }) {
   const user = await requirePageRole(["customer"]);
   const { id } = await params;
-
-  let data;
-
-  try {
-    data = await getPaymentSummaryForUser(user.id, id);
-  } catch {
-    notFound();
-  }
+  const data = await getPaymentSummaryForUser(user.id, id).catch(() => notFound());
 
   return (
     <div className="container-shell space-y-8 py-10 md:py-14">

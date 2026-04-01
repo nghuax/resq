@@ -2,28 +2,19 @@ import { PageHeader } from "@/components/common/page-header";
 import { AdminDashboardPanel } from "@/components/admin/admin-dashboard-panel";
 import { requirePageRole } from "@/server/services/page-auth";
 import { listAdminRequests, listFixerCandidates } from "@/server/services/admin-service";
-import { getDb } from "@/server/db/prisma";
+import {
+  listPricingRulesWithServices,
+  listServiceAreaRules,
+} from "@/server/services/service-type-service";
 
 export default async function AdminPage() {
   await requirePageRole(["admin"]);
-  const db = await getDb();
 
   const [requests, fixers, pricingRules, serviceAreaRules] = await Promise.all([
     listAdminRequests(),
     listFixerCandidates(),
-    db.pricingRule.findMany({
-      include: {
-        serviceType: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    }),
-    db.serviceAreaRule.findMany({
-      orderBy: {
-        cityProvince: "asc",
-      },
-    }),
+    listPricingRulesWithServices(),
+    listServiceAreaRules(),
   ]);
 
   return (

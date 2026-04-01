@@ -11,7 +11,7 @@ import {
 } from "@/lib/auth/session";
 import { normalizeVietnamesePhone } from "@/lib/utils";
 import { sendOtpSchema, verifyOtpSchema } from "@/schemas/auth";
-import { getDb } from "@/server/db/prisma";
+import { api, convexMutation, convexQuery } from "@/server/db/convex";
 
 export type SessionUser = {
   id: string;
@@ -62,37 +62,15 @@ export async function verifyOtp(
     throw new ApiError(verified.reason ?? "Xác thực OTP thất bại.", 401);
   }
 
-  const db = await getDb();
-
-  let user = await db.user.findUnique({
-    where: {
-      phone: normalizedPhone,
-    },
-  });
-
-  if (!user) {
-    user = await db.user.create({
-      data: {
-        phone: normalizedPhone,
-        name:
-          input.name?.trim() ||
-          `Khách hàng ${normalizedPhone.slice(Math.max(0, normalizedPhone.length - 4))}`,
-        role: "customer",
-      },
-    });
-  }
-
   const tokenId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-
-  await db.userSession.create({
-    data: {
-      userId: user.id,
-      tokenId,
-      expiresAt,
-      userAgent: metadata?.userAgent ?? undefined,
-      ipAddress: metadata?.ipAddress ?? undefined,
-    },
+  const user = await convexMutation<SessionUser>(api.auth.upsertUserAndCreateSession, {
+    phone: normalizedPhone,
+    name: input.name?.trim() || undefined,
+    tokenId,
+    expiresAt: expiresAt.getTime(),
+    userAgent: metadata?.userAgent ?? undefined,
+    ipAddress: metadata?.ipAddress ?? undefined,
   });
 
   const token = await signSessionToken({
@@ -118,15 +96,12 @@ export async function getCurrentUser() {
 
   try {
     const payload = await verifySessionToken(token);
-    const db = await getDb();
-
-    const session = await db.userSession.findUnique({
-      where: {
-        tokenId: payload.sessionId,
-      },
-      include: {
-        user: true,
-      },
+    const session = await convexQuery<{
+      status: string;
+      expiresAt: Date;
+      user: SessionUser & { isActive: boolean };
+    } | null>(api.auth.getSessionWithUserByTokenId, {
+      tokenId: payload.sessionId,
     });
 
     if (
@@ -173,15 +148,8 @@ export async function signOutCurrentUser() {
   if (token) {
     try {
       const payload = await verifySessionToken(token);
-      const db = await getDb();
-
-      await db.userSession.updateMany({
-        where: {
-          tokenId: payload.sessionId,
-        },
-        data: {
-          status: "revoked",
-        },
+      await convexMutation(api.auth.revokeSessionByTokenId, {
+        tokenId: payload.sessionId,
       });
     } catch (error) {
       console.error(error);

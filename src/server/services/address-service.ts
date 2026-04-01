@@ -1,45 +1,17 @@
 import { savedAddressSchema } from "@/schemas/address";
-import { getDb } from "@/server/db/prisma";
+import { api, asConvexId, convexMutation, convexQuery } from "@/server/db/convex";
+import type { AddressView } from "@/server/services/view-models";
 
-export async function listAddressesForUser(userId: string) {
-  const db = await getDb();
-
-  return db.savedAddress.findMany({
-    where: {
-      userId,
-    },
-    orderBy: [
-      {
-        isDefault: "desc",
-      },
-      {
-        createdAt: "desc",
-      },
-    ],
+export async function listAddressesForUser(userId: string): Promise<AddressView[]> {
+  return convexQuery<AddressView[]>(api.customer.listAddressesForUser, {
+    userId: asConvexId<"users">(userId),
   });
 }
 
 export async function createAddressForUser(userId: string, rawInput: unknown) {
   const input = savedAddressSchema.parse(rawInput);
-  const db = await getDb();
-
-  return db.$transaction(async (tx) => {
-    if (input.isDefault) {
-      await tx.savedAddress.updateMany({
-        where: {
-          userId,
-        },
-        data: {
-          isDefault: false,
-        },
-      });
-    }
-
-    return tx.savedAddress.create({
-      data: {
-        userId,
-        ...input,
-      },
-    });
+  return convexMutation(api.customer.createAddressForUser, {
+    userId: asConvexId<"users">(userId),
+    input,
   });
 }
