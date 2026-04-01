@@ -1,26 +1,134 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --sand-50: #f6f7fb;
+  --sand-100: #eef1f8;
+  --sand-200: #dde3f0;
+  --sand-300: #cad4e7;
+  --brand-300: #3b82f6;
+  --brand-400: #2563eb;
+  --brand-500: #1745d8;
+  --brand-600: #0843ee;
+  --brand-700: #042699;
+  --accent-300: #9cecff;
+  --accent-400: #65d6ff;
+  --accent-500: #35b8ee;
+  --danger-500: #e11d48;
+  --danger-600: #be123c;
+  --night-950: #080b0d;
+  --night-900: #0d1218;
+  --night-800: #142331;
+  --ink-950: #0f172a;
+  --ink-900: #172033;
+  --ink-700: #334155;
+  --ink-600: #475569;
+  --ink-500: #64748b;
+  --ink-400: #94a3b8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--sand-100);
+  --color-foreground: var(--ink-900);
+  --font-sans: var(--font-be-vietnam);
+  --font-display: var(--font-syne);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(8, 67, 238, 0.14), transparent 30%),
+    radial-gradient(circle at top right, rgba(101, 214, 255, 0.14), transparent 26%),
+    linear-gradient(180deg, #f8f9fd 0%, #eef1f8 52%, #e8edf7 100%);
+  color: var(--ink-900);
+  font-family: var(--font-be-vietnam), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(15, 118, 110, 0.18);
+}
+
+.font-display {
+  font-family: var(--font-syne), sans-serif;
+}
+
+.container-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 84rem;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 768px) {
+  .container-shell {
+    padding-inline: 1.5rem;
+  }
+}
+
+.leaflet-container {
+  min-height: 320px;
+  width: 100%;
+  border-radius: 24px;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+
+.section-kicker {
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--brand-700);
+}
+
+.section-kicker-cyan {
+  color: var(--accent-400);
+}
+
+.blue-tech-gradient {
+  background:
+    radial-gradient(circle at top right, rgba(101, 214, 255, 0.22), transparent 28%),
+    linear-gradient(135deg, #042699 0%, #0843ee 58%, #116af8 100%);
+}
+
+.city-night-gradient {
+  background:
+    radial-gradient(circle at top right, rgba(101, 214, 255, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(13, 18, 24, 0.98) 0%, rgba(8, 11, 13, 0.98) 100%);
+}
+
+.topographic-lines-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 420' fill='none'%3E%3Cpath d='M-80 54C62 8 186 126 334 92c129-30 190-90 354-56 133 27 186 113 340 92 114-15 177-91 312-70' stroke='rgba(101,214,255,0.22)' stroke-width='2'/%3E%3Cpath d='M-60 144c144-44 235 25 380 45 153 21 220-49 375-25 148 24 188 84 332 56 100-20 170-88 299-64' stroke='rgba(101,214,255,0.2)' stroke-width='2'/%3E%3Cpath d='M-70 250c138-47 205-8 346 31 156 43 245-7 391-42 121-29 191-5 308 38 124 45 205 21 325-35' stroke='rgba(101,214,255,0.18)' stroke-width='2'/%3E%3Cpath d='M-60 342c146-43 239 38 391 51 147 13 222-55 367-47 148 8 225 94 381 66 102-18 162-72 271-80' stroke='rgba(101,214,255,0.18)' stroke-width='2'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.topographic-lines-light {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 340' fill='none'%3E%3Cpath d='M-80 58C44 12 188 114 336 92c145-22 191-91 350-73 146 16 222 96 370 92 104-3 186-52 304-36' stroke='rgba(8,67,238,0.1)' stroke-width='2'/%3E%3Cpath d='M-80 154c114-40 210 15 342 34 169 24 244-50 408-34 145 14 223 70 353 44 83-16 143-53 208-49' stroke='rgba(8,67,238,0.08)' stroke-width='2'/%3E%3Cpath d='M-70 248c136-41 231 49 390 49 155 0 214-75 367-74 132 1 216 68 360 57 75-6 132-33 198-54' stroke='rgba(8,67,238,0.08)' stroke-width='2'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.metric-glow {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 24px 60px -34px rgba(4, 38, 153, 0.45);
 }

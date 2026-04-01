@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  customer
+  fixer
+  admin
+}
+
+enum SessionStatus {
+  active
+  revoked
+  expired
+}
+
+enum VehicleType {
+  motorbike
+  car
+  truck
+  van
+}
+
+enum FuelType {
+  gasoline
+  diesel
+  electric
+  hybrid
+  unknown
+}
+
+enum RequestStatus {
+  submitted
+  processing
+  fixer_matched
+  fixer_on_the_way
+  arrived
+  in_progress
+  completed
+  cancelled
+}
+
+enum PaymentMethod {
+  cash
+  ewallet
+  card
+  bank_transfer
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum NotificationType {
+  request_update
+  system
+  payment
+  otp
+}
+
+enum NotificationChannel {
+  app
+  sms
+  email
+}
+
+model User {
+  id                   String             @id @default(cuid())
+  phone                String             @unique
+  name                 String
+  email                String?
+  role                 UserRole           @default(customer)
+  locale               String             @default("vi")
+  isActive             Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  sessions             UserSession[]
+  vehicles             Vehicle[]
+  addresses            SavedAddress[]
+  requests             Request[]          @relation("CustomerRequests")
+  assignedRequests     Request[]          @relation("FixerAssignments")
+  fixerProfile         FixerProfile?
+  notifications        Notification[]
+  reviews              Review[]
+  requestStatusActions RequestStatusLog[] @relation("StatusActor")
+}
+
+model UserSession {
+  id         String        @id @default(cuid())
+  userId     String
+  tokenId    String        @unique
+  status     SessionStatus @default(active)
+  expiresAt  DateTime
+  lastSeenAt DateTime?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime      @default(now())
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+model Vehicle {
+  id              String                  @id @default(cuid())
+  userId          String
+  vehicleType     VehicleType
+  brand           String
+  model           String
+  licensePlate    String
+  year            Int?
+  fuelType        FuelType                @default(unknown)
+  notes           String?
+  isDefault       Boolean                 @default(false)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  carRegistration CarRegistrationDetails?
+  requests        Request[]
+
+  @@index([userId, isDefault])
+}
+
+model CarRegistrationDetails {
+  id                       String    @id @default(cuid())
+  vehicleId                String    @unique
+  registrationNumber       String?
+  ownerName                String?
+  registrationProvinceCity String?
+  inspectionExpiryDate     DateTime?
+  chassisNumber            String?
+  engineNumber             String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  vehicle                  Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+model SavedAddress {
+  id           String    @id @default(cuid())
+  userId       String
+  label        String
+  addressLine  String
+  ward         String
+  district     String
+  cityProvince String
+  landmark     String?
+  latitude     Float
+  longitude    Float
+  isDefault    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests     Request[]
+
+  @@index([userId, isDefault])
+}
+
+model ServiceType {
+  id             String             @id @default(cuid())
+  key            String             @unique
+  nameVi         String
+  nameEn         String
+  descriptionVi  String?
+  isFuelService  Boolean            @default(false)
+  basePriceVnd   Int                @default(0)
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  requests       Request[]
+  fixerServices  FixerServiceType[]
+  pricingRules   PricingRule[]
+}
+
+model FixerProfile {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  displayName          String
+  phone                String
+  cityProvince         String
+  districts            String[]
+  vehicleTypeSupport   String[]
+  ratingAverage        Float              @default(5)
+  totalJobs            Int                @default(0)
+  isAvailable          Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceTypes         FixerServiceType[]
+}
+
+model FixerServiceType {
+  id             String       @id @default(cuid())
+  fixerProfileId String
+  serviceTypeId  String
+  createdAt      DateTime     @default(now())
+  fixerProfile   FixerProfile @relation(fields: [fixerProfileId], references: [id], onDelete: Cascade)
+  serviceType    ServiceType  @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([fixerProfileId, serviceTypeId])
+}
+
+model Request {
+  id               String             @id @default(cuid())
+  requestCode      String             @unique
+  userId           String
+  vehicleId        String
+  savedAddressId   String?
+  serviceTypeId    String
+  assignedFixerId  String?
+  status           RequestStatus      @default(submitted)
+  note             String?
+  contactPhone     String
+  scheduledAt      DateTime?
+  locationLabel    String
+  addressLine      String
+  ward             String
+  district         String
+  cityProvince     String
+  landmark         String?
+  latitude         Float
+  longitude        Float
+  priceEstimateVnd Int                @default(0)
+  finalPriceVnd    Int?
+  cancelReason     String?
+  cancelledAt      DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  user             User               @relation("CustomerRequests", fields: [userId], references: [id], onDelete: Cascade)
+  vehicle          Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  savedAddress     SavedAddress?      @relation(fields: [savedAddressId], references: [id], onDelete: SetNull)
+  serviceType      ServiceType        @relation(fields: [serviceTypeId], references: [id], onDelete: Restrict)
+  assignedFixer    User?              @relation("FixerAssignments", fields: [assignedFixerId], references: [id], onDelete: SetNull)
+  fuelDetails      RequestFuelDetails?
+  photos           RequestPhoto[]
+  statusLogs       RequestStatusLog[]
+  invoice          Invoice?
+  payments         Payment[]
+  review           Review?
+  notifications    Notification[]
+
+  @@index([userId, status])
+  @@index([assignedFixerId, status])
+}
+
+model RequestFuelDetails {
+  id              String    @id @default(cuid())
+  requestId       String    @unique
+  fuelType        FuelType
+  litersRequested Float
+  preferredGrade  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  request         Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model RequestPhoto {
+  id        String   @id @default(cuid())
+  requestId String
+  fileName  String
+  imageUrl  String?
+  caption   String?
+  createdAt DateTime @default(now())
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+model RequestStatusLog {
+  id            String        @id @default(cuid())
+  requestId     String
+  status        RequestStatus
+  titleVi       String
+  descriptionVi String?
+  actorUserId   String?
+  etaMinutes    Int?
+  createdAt     DateTime      @default(now())
+  request       Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actorUser     User?         @relation("StatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  requestId      String        @unique
+  serviceFeeVnd  Int           @default(0)
+  fuelCostVnd    Int           @default(0)
+  extraChargesVnd Int          @default(0)
+  totalVnd       Int           @default(0)
+  paymentStatus  PaymentStatus @default(pending)
+  issuedAt       DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  request        Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  payments       Payment[]
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  requestId     String
+  invoiceId     String?
+  amountVnd     Int
+  method        PaymentMethod
+  status        PaymentStatus @default(pending)
+  referenceCode String?
+  providerName  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  request       Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  invoice       Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, status])
+}
+
+model Review {
+  id                    String   @id @default(cuid())
+  requestId             String   @unique
+  userId                String
+  overallRating         Int
+  professionalismRating Int
+  arrivalSpeedRating    Int
+  serviceQualityRating  Int
+  communicationRating   Int
+  comment               String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  request               Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ServiceAreaRule {
+  id                    String   @id @default(cuid())
+  cityProvince          String
+  district              String?
+  isActive              Boolean  @default(true)
+  notes                 String?
+  responseWindowMinutes Int      @default(30)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model PricingRule {
+  id                  String      @id @default(cuid())
+  serviceTypeId       String
+  cityProvince        String?
+  vehicleType         VehicleType?
+  basePriceVnd        Int
+  fuelPricePerLiterVnd Int?
+  nightSurchargeVnd   Int         @default(0)
+  isActive            Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  serviceType         ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  requestId String?
+  type      NotificationType
+  channel   NotificationChannel
+  titleVi   String
+  messageVi String
+  isRead    Boolean             @default(false)
+  createdAt DateTime            @default(now())
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  request   Request?            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
